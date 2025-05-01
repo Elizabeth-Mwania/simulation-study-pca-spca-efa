@@ -1,0 +1,510 @@
+
+
+## SIMULATION ANALYSIS
+
+```{r}
+results <- read.csv("/home/student/Documents/aall-articles/comparison-study-pca-spca-efa/Lp_rot1129-main/simulation_results/full_results.csv")
+results
+```
+
+```{r}
+library(dplyr)
+
+agg <- results %>%
+  group_by(method, alpha) %>%
+  summarise(
+    mean_mse = mean(mse, na.rm = TRUE),
+    se_mse = sd(mse, na.rm = TRUE) / sqrt(sum(!is.na(mse))),
+    .groups = "drop"
+  )
+agg
+```
+```{r}
+library(ggplot2)
+
+ggplot(agg, aes(x = alpha, y = mean_mse, color = method, group = method)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_mse - se_mse, ymax = mean_mse + se_mse), width = 0.03) +
+  labs(
+    title = "Reconstruction Error (MSE) Across Methods",
+    x = "Sparsity Fraction (α)",
+    y = "Mean Reconstruction Error (MSE)",
+    color = "Method"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(grid) 
+
+# Main plot
+p <- ggplot(agg, aes(
+  x = alpha, y = mean_mse,
+  color = method,
+  linetype = line_type,
+  group = interaction(method, n)
+)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_mse - se_mse, ymax = mean_mse + se_mse), width = 0.03) +
+  scale_linetype_identity() +
+  labs(
+    #title = "Reconstruction Error by Sparsity",
+    x = "Sparsity",
+    y = "Mean Squared Error",
+    color = "Method"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.ticks = element_line(color = "black"),
+    axis.line = element_line(color = "black", size = 0.5)
+  )
+
+# Custom legend with shorter lines
+final_plot <- p + annotation_custom(
+  grob = grobTree(
+    linesGrob(x = unit(c(0.1, 0.2), "npc"), y = unit(c(0.9, 0.9), "npc"),
+              gp = gpar(lwd = 2, lty = "dotted")),
+    textGrob("n = 100", x = unit(0.22, "npc"), y = unit(0.9, "npc"), hjust = 0, gp = gpar(cex = 0.8)),
+
+    linesGrob(x = unit(c(0.1, 0.2), "npc"), y = unit(c(0.83, 0.83), "npc"),
+              gp = gpar(lwd = 2, lty = "solid")),
+    textGrob("n = 500", x = unit(0.22, "npc"), y = unit(0.83, "npc"), hjust = 0, gp = gpar(cex = 0.8))
+  )
+)
+
+# Save the figure
+ggsave(
+  "/home/student/Documents/aimsessaytemplate/EssayTemplate_19-03-2025/Figures/reconstruction_error_sparsity2.png", 
+  plot = final_plot, width = 9, height = 5, dpi = 300
+)
+
+
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+agg <- results %>%
+  group_by(method, alpha, n, p) %>%
+  summarise(
+    mean_mse = mean(mse, na.rm = TRUE),
+    se_mse = sd(mse, na.rm = TRUE) / sqrt(sum(!is.na(mse))),
+    .groups = "drop"
+  )
+
+library(ggplot2)
+
+ggplot(agg, aes(
+  x = alpha, y = mean_mse,
+  color = method,
+  linetype = as.factor(n),
+  group = interaction(method, n)
+)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_mse - se_mse, ymax = mean_mse + se_mse), width = 0.03) +
+  facet_grid(n ~ p, labeller = label_both) +
+  labs(
+    title = "Reconstruction Error by Sparsity",
+    x = "alpha",
+    y = "Mean Squared Error",
+    color = "Method",
+    linetype = "Sample Size (n)"
+  ) +
+  scale_linetype_manual(values = c("100" = "dotted", "500" = "solid")) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank()
+  )
+
+  
+ggsave("/home/student/Documents/aall-articles/comparison-study-pca-spca-efa/Lp_rot1129-main/simulation_results/reconstruction_error_sparsity1.png", width = 8, height = 5)
+
+
+```
+
+
+```{r}
+table(is.na(results$mse[results$method == "EFA" & results$n == 100 & results$p == 100]))
+
+```
+
+```{r}
+library(ggplot2)
+
+
+```
+
+## reconstruction error by noise
+
+```{r}
+
+```
+
+####SPARSITY RECOVERy
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Prepare sparsity recovery data
+# Create publication-quality sparsity recovery plot with legend on the right
+sparsity_plot <- ggplot(sparsity_data, aes(x = alpha, y = mean_rate, 
+                                           color = method, linetype = line_type)) +
+  geom_line(aes(group = interaction(method, n)), size = 0.8) +
+  geom_point(aes(shape = n_label), size = 2.5) +
+  geom_errorbar(aes(ymin = mean_rate - se_rate,
+                    ymax = mean_rate + se_rate),
+                width = 0.02, size = 0.5) +
+  facet_wrap(~error_type, ncol = 2) +
+  scale_linetype_identity() +
+  scale_shape_manual(values = c(16, 17)) +
+  scale_x_continuous(breaks = unique(sparsity_data$alpha)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(
+    x = "Sparsity Level (α)",
+    y = "Error Rate",
+    color = "Method",
+    shape = "Sample Size"
+  ) +
+  theme_classic() +
+  theme(
+    text = element_text(family = "serif"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    legend.position = "right",     # <- moved legend to the right
+    legend.box = "vertical",       # <- stacked legend items vertically
+    strip.text = element_text(size = 11, face = "bold"),
+    strip.background = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+    aspect.ratio = 1
+  ) +
+  guides(
+    color = guide_legend(order = 1, override.aes = list(linetype = "solid")),
+    shape = guide_legend(order = 2)
+  )
+
+# Save the updated plot
+ggsave(
+  "/home/student/Documents/aimsessaytemplate/EssayTemplate_19-03-2025/Figures/sparsity_recovery_FPR_FNR.png", 
+  plot = sparsity_plot, width = 10, height = 5, dpi = 300
+)
+
+
+```
+
+
+```{r}
+library(dplyr)
+agg_sparsity <- results %>%
+  group_by(method, alpha, n, p, sigma_sq) %>%
+  summarise(
+    mean_fpr = mean(false_positive_rate, na.rm = TRUE),
+    se_fpr = sd(false_positive_rate, na.rm = TRUE) / sqrt(sum(!is.na(false_positive_rate))),
+    mean_fnr = mean(false_negative_rate, na.rm = TRUE),
+    se_fnr = sd(false_negative_rate, na.rm = TRUE) / sqrt(sum(!is.na(false_negative_rate))),
+    .groups = "drop"
+  )
+
+```
+
+```{r}
+library(ggplot2)
+ggplot(agg_sparsity, aes(x = alpha, y = mean_fpr, color = method, linetype = as.factor(n), group = interaction(method, n))) +
+  geom_line(size = 1.2) +
+  geom_errorbar(aes(ymin = mean_fpr - se_fpr, ymax = mean_fpr + se_fpr), width = 0, size = 0.7) +
+  facet_grid(. ~ p, labeller = labeller(p = function(x) paste("Variables (p):", x))) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_linetype_manual(values = c("100" = "dotted", "500" = "solid")) +
+  labs(
+    title = "False Positive Rate (FPR) in Sparsity Recovery",
+    x = "Sparsity Fraction (α)",
+    y = "False Positive Rate",
+    color = "Method",
+    linetype = "Sample Size"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    legend.position = "top",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.7)
+  )
+
+ggsave("/home/student/Documents/aimsessaytemplate/EssayTemplate_19-03-2025/Figures/sparsity_recovery_FPR.png", width = 9, height = 5, dpi = 300)
+#ggsave("/home/student/Documents/aall-articles/comparison-study-pca-spca-efa/Lp_rot1129-main/simulation_results/sparsity_recovery_FPR.png", width = 9, height = 5, dpi = 300)
+
+```
+
+```{r}
+ggplot(agg_sparsity, aes(x = alpha, y = mean_fnr, color = method, linetype = as.factor(n), group = interaction(method, n))) +
+  geom_line(size = 1.2) +
+  geom_errorbar(aes(ymin = mean_fnr - se_fnr, ymax = mean_fnr + se_fnr), width = 0, size = 0.7) +
+  facet_grid(. ~ p, labeller = labeller(p = function(x) paste("Variables (p):", x))) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_linetype_manual(values = c("100" = "dotted", "500" = "solid")) +
+  labs(
+    title = "False Negative Rate (FNR) in Sparsity Recovery",
+    x = "Sparsity Fraction (α)",
+    y = "False Negative Rate",
+    color = "Method",
+    linetype = "Sample Size"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    legend.position = "top",
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA, size = 0.7)
+  )
+ggsave("/home/student/Documents/aall-articles/comparison-study-pca-spca-efa/Lp_rot1129-main/simulation_results/sparsity_recovery_FNR.png", width = 9, height = 5, dpi = 300)
+
+```
+
+### LOADING RECOVERY
+
+```{r}
+# Load necessary libraries if not already loaded
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Read the simulation results if not already in memory
+#results <- read_csv(file.path(output_dir, "simulated_results_v1.csv"))
+
+# Prepare data for visualization - focus on loading_error vs gamma
+plot_data <- results %>%
+  group_by(method, gamma) %>%
+  summarize(
+    mean_loading_error = mean(loading_error, na.rm = TRUE),
+    se_loading_error = sd(loading_error, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Create the visualization
+ggplot(plot_data, aes(x = factor(gamma), y = mean_loading_error, 
+                      group = method, color = method)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_loading_error - se_loading_error,
+                ymax = mean_loading_error + se_loading_error),
+                width = 0.1) +
+  labs(
+    title = "Loading Error by Eigenvalue Decay Rate (gamma)",
+    x = "Eigenvalue Decay Rate (gamma)",
+    y = "Loading Error (Frobenius Norm)",
+    color = "Method"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+# Save the plot
+ggsave(file.path(output_dir, "loading_error_vs_gamma.png"), 
+       width = 8, height = 6, dpi = 300)
+```
+```{r}
+# Facet by alpha and sigma_sq
+library(ggplot2)
+library(dplyr)
+library(grid)  # Needed for custom annotations
+
+# Prepare data with corrected line type mapping
+library(ggplot2)
+library(dplyr)
+library(grid)
+
+# Prepare data
+plot_data <- results %>%
+  group_by(method, gamma, n) %>%
+  summarize(
+    mean_loading_error = mean(loading_error, na.rm = TRUE),
+    se_loading_error = sd(loading_error, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    n_label = factor(paste("n =", n), levels = c("n = 100", "n = 500")),
+    line_type = ifelse(n == 100, "dotted", "solid")
+  )
+
+# Base plot
+p <- ggplot(plot_data, aes(x = factor(gamma), y = mean_loading_error, 
+                           color = method, linetype = line_type)) +
+  geom_line(aes(group = interaction(method, n)), size = 0.8) +
+  geom_point(aes(shape = n_label), size = 2.5) +
+  geom_errorbar(aes(ymin = mean_loading_error - se_loading_error,
+                    ymax = mean_loading_error + se_loading_error),
+                width = 0.15, size = 0.5) +
+  scale_linetype_identity() +
+  scale_shape_manual(values = c(16, 17)) +
+  labs(
+    x = "Eigenvalue Decay Rate (γ)",
+    y = "Loading Error",
+    color = "Method"
+  ) +
+  theme_classic() +
+  theme(
+    text = element_text(family = "serif"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10),
+    legend.title = element_text(size = 11),
+    legend.text = element_text(size = 10),
+    legend.position = "bottom",
+    axis.line = element_line(color = "black", size = 0.5),
+    axis.line.y.right = element_blank(),
+    axis.line.x.top = element_blank(),
+    aspect.ratio = 0.8
+  ) +
+  guides(
+    color = guide_legend(order = 1),
+    shape = "none"
+  )
+
+# Inset box at top-right
+inset <- grobTree(
+  rectGrob(x = unit(0.82, "npc"), y = unit(0.82, "npc"), 
+           width = unit(0.35, "npc"), height = unit(0.15, "npc"), 
+           gp = gpar(fill = "white", col = "black")),
+  linesGrob(x = unit(c(0.69, 0.79), "npc"), y = unit(0.88, "npc"),
+            gp = gpar(col = "black", lty = "dotted", lwd = 1.5)),
+  textGrob("n = 100", x = unit(0.80, "npc"), y = unit(0.88, "npc"), just = "left", gp = gpar(cex = 0.7)),
+
+  linesGrob(x = unit(c(0.69, 0.79), "npc"), y = unit(0.76, "npc"),
+            gp = gpar(col = "black", lty = "solid", lwd = 1.5)),
+  textGrob("n = 500", x = unit(0.80, "npc"), y = unit(0.76, "npc"), just = "left", gp = gpar(cex = 0.7))
+)
+
+# Combine plot and inset
+final_plot <- p + annotation_custom(inset)
+
+# Save the plot
+ggsave("/home/student/Documents/aimsessaytemplate/EssayTemplate_19-03-2025/Figures/loadings_recovery_gamma.png", 
+       plot = final_plot, width = 9, height = 5, dpi = 300)
+
+#ggsave(file.path(output_dir, "loading_error_facets.png"), width = 12, height = 8, dpi = 300)
+```
+
+### correlation recovery
+```{r}
+library(ggplot2)
+library(dplyr)
+
+library(dplyr)
+
+agg_factor_score_cor <- results %>%
+  group_by(method, m, n) %>%
+  summarise(
+    mean_score_cor = mean(mean_factor_score_cor, na.rm = TRUE),
+    se_score_cor = sd(mean_factor_score_cor, na.rm = TRUE) / sqrt(sum(!is.na(mean_factor_score_cor))),
+    .groups = "drop"
+  )
+
+
+
+library(ggplot2)
+
+ggplot(agg_factor_score_cor, aes(
+  x = factor(m),                # Number of true factors on x-axis as factor for discrete ticks
+  y = mean_score_cor,
+  color = method,
+  group = interaction(method, n),
+  linetype = factor(n)          # Different line types for sample sizes
+)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = mean_score_cor - se_score_cor, ymax = mean_score_cor + se_score_cor), width = 0.2) +
+  scale_linetype_manual(values = c("100" = "dotted", "500" = "solid"), name = "Sample Size (n)") +
+  labs(
+    title = "Mean Factor Score Correlation by Number of True Factors",
+    x = "Number of True Factors (m)",
+    y = "Mean Factor Score Correlation",
+    color = "Method"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    legend.position = "top",
+    legend.title = element_text(face = "bold"),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(size = 12),
+    plot.title = element_text(face = "bold", size = 16, hjust = 0.5)
+  )
+
+
+  
+
+
+
+```
+
+```{r}
+library(dplyr)
+
+# Aggregate mean factor score correlations
+factor_score_summary <- results %>%
+  group_by(method, n, p, alpha, gamma, sigma_sq) %>%
+  summarize(
+    mean_cor = mean(mean_factor_score_cor, na.rm = TRUE),
+    se_cor = sd(mean_factor_score_cor, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+ggplot(factor_score_summary, 
+       aes(x = alpha, y = mean_cor, color = method, linetype = factor(n))) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_cor - se_cor, ymax = mean_cor + se_cor), width = 0.02) +
+  labs(
+    title = "Factor Score Correlation by Sparsity (α) and Sample Size",
+    x = "Sparsity Level (α)",
+    y = "Mean Factor Score Correlation",
+    color = "Method",
+    linetype = "Sample Size"
+  ) +
+  theme_minimal()
+
+
+```
+```{r}
+library(ggplot2)
+
+ggplot(results, aes(x = method, y = mean_factor_score_cor, fill = method)) +
+  geom_boxplot() +
+  facet_wrap(~n, labeller = labeller(n = function(x) paste("n =", x))) +
+  labs(
+    #title = "Factor Score Correlation by Method and Sample Size",
+    x = "Method",
+    y = "Mean Factor Score Correlation",
+    fill = "Method"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid.major = element_blank(),   # Remove major grid lines
+    panel.grid.minor = element_blank(),   # Remove minor grid lines
+    axis.line = element_line(color = "black", size = 0.5),  # Add axis lines
+    axis.ticks = element_line(color = "black"),             # Add tick marks
+    strip.text = element_text(face = "bold"),               # Optional: bold facet labels
+    plot.title = element_text(hjust = 0.5, face = "bold")   # Center and bold title
+  )
+ggsave("/home/student/Documents/aimsessaytemplate/EssayTemplate_19-03-2025/Figures/factorscorecorrelation.png", 
+       plot = final_plot, width = 9, height = 5, dpi = 300)
+```
+
